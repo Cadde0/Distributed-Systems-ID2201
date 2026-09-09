@@ -1,5 +1,15 @@
 -module(rudy).
--export([init/1]).
+-export([start/1, stop/0]).
+
+start(Port) ->
+    %Start the server in a new process so we can stop it later.
+    % register names the Pid "rudy"
+    % spawn creates an independent process that runs the init().
+    register(rudy, spawn(fun() -> init(Port) end)).
+
+stop() ->
+    %Stop the server by sending a message to the process that is running the server.
+    exit(whereis(rudy), "Time to die").
 
 init(Port) ->
     %Deliver as list so we can pattern match on it
@@ -21,7 +31,8 @@ handle_connections(ListenSocket) ->
     case gen_tcp:accept(ListenSocket) of
         %When a a client connects, a new socket is created for that client, and we can use that socket to communicate with the client.
         {ok, ClientSocket} ->
-            handle_request(ClientSocket);
+            handle_request(ClientSocket),
+            handle_connections(ListenSocket);
         {error, Error} ->
             io:format("Failed to accept connection: ~w~n", [Error])
     end.

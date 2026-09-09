@@ -16,7 +16,10 @@ req_line([$G, $E, $T, 32 | R0]) ->
     [13, 10 | R3] = R2,
     {{get, URI, Version}, R3}.
 %TODO: Add support for other HTTP methods (POST, PUT, DELETE, etc.)
+% 
 % TODO: If not \r\n, return an error or handle the error appropriately.
+% 
+% TODO: concenate request if the request is split across multiple TCP packets. This can happen if the request is large or if the client is slow to send the request. We can use a loop to keep receiving data until we have the full request, and then parse it.
 
 
 %Base case, when the next character is a space(32), the URI is done.
