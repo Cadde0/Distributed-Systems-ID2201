@@ -10,6 +10,7 @@ start(Port) ->
 stop() ->
     %Stop the server by sending a message to the process that is running the server.
     exit(whereis(rudy), "Time to die").
+%TODO make a better stop function that lets processes finish before shutdown.
 
 init(Port) ->
     %Deliver as list so we can pattern match on it
@@ -31,6 +32,7 @@ handle_connections(ListenSocket) ->
     case gen_tcp:accept(ListenSocket) of
         %When a a client connects, a new socket is created for that client, and we can use that socket to communicate with the client.
         {ok, ClientSocket} ->
+            %spawn(fun() -> handle_request(ClientSocket) end),
             handle_request(ClientSocket),
             handle_connections(ListenSocket);
         {error, Error} ->
@@ -53,4 +55,5 @@ handle_request(ClientSocket) ->
 
 
 handle_response({{get, URI, _Version}, _Headers, _Body}) ->
+    timer:sleep(40), %simulate some processing time, 40ms
     http:ok("Hello " ++ URI).

@@ -19,7 +19,7 @@ req_line([$G, $E, $T, 32 | R0]) ->
 % 
 % TODO: If not \r\n, return an error or handle the error appropriately.
 % 
-% TODO: concenate request if the request is split across multiple TCP packets. This can happen if the request is large or if the client is slow to send the request. We can use a loop to keep receiving data until we have the full request, and then parse it.
+% TODO: concenate request if the request is split across multiple packets.
 
 
 %Base case, when the next character is a space(32), the URI is done.
@@ -29,7 +29,7 @@ req_uri([32 | R0]) ->
 req_uri([C | R0]) ->
     {RestURI, R1} = req_uri(R0),
     {[C | RestURI], R1}.
-%TODO: Optimization: make this tail recursive, so we don't have to build up a list of characters and then reverse it at the end. Instead, we can build up the URI as we go and return it when we're done.
+%TODO: make this tail recursive, build up URI as we go and return it when done.
 % 
 %TODO: Parse the URI into its components (path, query string, etc.) and return them as a tuple instead of just a list of characters. This will make it easier to handle the request later on.
 % 
