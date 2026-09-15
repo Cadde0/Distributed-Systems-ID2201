@@ -1,5 +1,5 @@
 -module(bench).
--export([bench/2, pbench/3]).
+-export([bench/2, pbench/3, frag_test/2]).
 
 bench(Host, Port) ->
     StartTime = erlang:system_time(millisecond),
@@ -37,3 +37,15 @@ request(Host, Port) ->
             io:format("bench: error: ~w~n", [Error])
     end,
     gen_tcp:close(ServerSocket).
+
+frag_test(Host, Port) ->
+    Opt = [list, {active, false}, {reuseaddr, true}],
+    {ok, Server} = gen_tcp:connect(Host, Port, Opt),
+    Request = http:get("foo"),
+    {Part1, Part2} = lists:split(5, Request),
+    gen_tcp:send(Server, Part1),
+    timer:sleep(200),
+    gen_tcp:send(Server, Part2),
+    Recv = gen_tcp:recv(Server, 0),
+    gen_tcp:close(Server),
+    Recv.

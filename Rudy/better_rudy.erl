@@ -1,4 +1,4 @@
--module(rudy).
+-module(better_rudy).
 -export([start/1, stop/0]).
 
 start(Port) ->
@@ -9,6 +9,7 @@ start(Port) ->
 
 stop() ->
     %Stop the server by sending a message to the process that is running the server.
+
     exit(whereis(rudy), "Time to die").
 %TODO make a better stop function that lets processes finish before shutdown.
 
@@ -31,19 +32,20 @@ handle_connections(ListenSocket) ->
     case gen_tcp:accept(ListenSocket) of
         %When a a client connects, a new socket is created for that client, and we can use that socket to communicate with the client.
         {ok, ClientSocket} ->
-            spawn(fun() -> handle_request(ClientSocket) end),
-            %handle_request(ClientSocket),
+            
+            spawn(fun() -> handle_better_request(ClientSocket) end),
             handle_connections(ListenSocket);
         {error, Error} ->
             io:format("Failed to accept connection: ~w~n", [Error])
     end.
 
-handle_request(ClientSocket) ->
-    %We use gen_tcp:recv to receive data from the client socket. The second argument is the number of bytes to receive, 0 means we want to receive all available data.
-    Recv = gen_tcp:recv(ClientSocket, 0),
-    case Recv of
-        {ok, Data} ->
-            Request = http:parse_req(Data),
+
+handle_better_request(ClientSocket) ->
+    Data = read_req(ClientSocket, []),
+    
+    case Data of
+        {ok, Str} ->
+            Request = http:parse_req(Str),
             Response = handle_response(Request),
             gen_tcp:send(ClientSocket, Response);
         {error, Error} ->
@@ -51,6 +53,25 @@ handle_request(ClientSocket) ->
     end,
     gen_tcp:close(ClientSocket).
 
+
+read_req(ClientSocket, Acc) ->
+    case find_header_end(Acc) of
+        true ->
+            {ok, Acc};
+        false ->
+            case gen_tcp:recv(ClientSocket, 0) of
+                {ok, Chunk} ->
+                    read_req(ClientSocket, Acc ++ Chunk);
+                {error, Error} ->
+                    {error, Error}
+            end
+    end.
+
+find_header_end(Str) ->
+    case string:str(Str, "\r\n\r\n") of
+        0 -> false;
+        _ -> true
+    end.
 
 handle_response({{get, URI, _Version}, _Headers, _Body}) ->
     timer:sleep(40), %simulate some processing time, 40ms
