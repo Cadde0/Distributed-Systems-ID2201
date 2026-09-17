@@ -1,18 +1,21 @@
 -module(better_rudy).
 -export([start/1, stop/0]).
 
+% Start the improved server in a separate registered process.
 start(Port) ->
     %Start the server in a new process so we can stop it later.
     % register names the Pid "rudy"
     % spawn creates an independent process that runs the init().
     register(rudy, spawn(fun() -> init(Port) end)).
 
+% Stop the registered server process.
 stop() ->
     %Stop the server by sending a message to the process that is running the server.
 
     exit(whereis(rudy), "Time to die").
 %TODO make a better stop function that lets processes finish before shutdown.
 
+% Listen for clients and initialize the socket in passive mode.
 init(Port) ->
     %Deliver as list so we can pattern match on it
     % active false means we will have to explicitly call gen_tcp:recv to get data from the socket
@@ -32,7 +35,7 @@ handle_connections(ListenSocket) ->
     case gen_tcp:accept(ListenSocket) of
         %When a a client connects, a new socket is created for that client, and we can use that socket to communicate with the client.
         {ok, ClientSocket} ->
-            
+            % Each client gets its own process so fragmented requests do not block accepts.
             spawn(fun() -> handle_better_request(ClientSocket) end),
             handle_connections(ListenSocket);
         {error, Error} ->
@@ -40,6 +43,7 @@ handle_connections(ListenSocket) ->
     end.
 
 
+% Read a complete request, then parse and answer it.
 handle_better_request(ClientSocket) ->
     Data = read_req(ClientSocket, []),
     
@@ -54,6 +58,7 @@ handle_better_request(ClientSocket) ->
     gen_tcp:close(ClientSocket).
 
 
+% Keep receiving chunks until the HTTP header terminator is present.
 read_req(ClientSocket, Acc) ->
     case find_header_end(Acc) of
         true ->
@@ -67,12 +72,14 @@ read_req(ClientSocket, Acc) ->
             end
     end.
 
+% Check whether the request contains the blank line ending its headers.
 find_header_end(Str) ->
     case string:str(Str, "\r\n\r\n") of
         0 -> false;
         _ -> true
     end.
 
+% Simulate processing and return a greeting for a parsed GET request.
 handle_response({{get, URI, _Version}, _Headers, _Body}) ->
     timer:sleep(40), %simulate some processing time, 40ms
     http:ok("Hello " ++ URI).
